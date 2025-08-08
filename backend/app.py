@@ -88,7 +88,7 @@ async def get_course_stats():
 @app.on_event("startup")
 async def startup_event():
     """Load initial documents on startup"""
-    docs_path = "../docs"
+    docs_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "docs")
     if os.path.exists(docs_path):
         print("Loading initial documents...")
         try:
@@ -96,6 +96,8 @@ async def startup_event():
             print(f"Loaded {courses} courses with {chunks} chunks")
         except Exception as e:
             print(f"Error loading documents: {e}")
+    else:
+        print(f"Docs path not found: {docs_path}")
 
 # Custom static file handler with no-cache headers for development
 from fastapi.staticfiles import StaticFiles
