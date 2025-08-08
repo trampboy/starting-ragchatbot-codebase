@@ -1,4 +1,4 @@
-from typing import Dict, Any, Optional, Protocol
+from typing import Dict, Any, Optional
 from abc import ABC, abstractmethod
 from vector_store import VectorStore, SearchResults
 
@@ -207,6 +207,7 @@ class ToolManager:
     
     def __init__(self):
         self.tools = {}
+        self._sequential_sources = []  # Track sources from sequential execution
     
     def register_tool(self, tool: Tool):
         """Register any tool that implements the Tool interface"""
@@ -231,7 +232,11 @@ class ToolManager:
     
     def get_last_sources(self) -> list:
         """Get sources from the last search operation"""
-        # Check all tools for last_sources attribute
+        # First check if we have sequential sources (from multi-round execution)
+        if self._sequential_sources:
+            return self._sequential_sources
+        
+        # Fallback to checking individual tools for last_sources attribute
         for tool in self.tools.values():
             if hasattr(tool, 'last_sources') and tool.last_sources:
                 return tool.last_sources
@@ -239,6 +244,22 @@ class ToolManager:
 
     def reset_sources(self):
         """Reset sources from all tools that track sources"""
+        # Reset sequential sources
+        self._sequential_sources = []
+        
+        # Reset individual tool sources
         for tool in self.tools.values():
             if hasattr(tool, 'last_sources'):
                 tool.last_sources = []
+    
+    def get_all_sequential_sources(self) -> list:
+        """Get all sources accumulated from sequential execution"""
+        return self._sequential_sources.copy()
+    
+    def set_sequential_sources(self, sources: list):
+        """Set sources from sequential execution"""
+        self._sequential_sources = sources.copy()
+    
+    def add_sequential_sources(self, sources: list):
+        """Add sources to the sequential source list"""
+        self._sequential_sources.extend(sources)
