@@ -239,3 +239,120 @@ def create_mock_tool_call(call_id: str, function_name: str, arguments: Dict[str,
     mock_tool_call.function.arguments = json.dumps(arguments)
     
     return mock_tool_call
+
+
+def create_mock_sequential_responses(responses_data: List[Dict[str, Any]]):
+    """
+    Create a list of mock responses for sequential tool calling tests.
+    
+    Args:
+        responses_data: List of dicts with keys:
+            - content: Response content
+            - tool_calls: Optional list of tool calls
+            - finish_reason: Optional finish reason (defaults based on tool_calls)
+    
+    Returns:
+        List of mock response objects
+    """
+    mock_responses = []
+    
+    for response_data in responses_data:
+        content = response_data.get('content', '')
+        tool_calls = response_data.get('tool_calls', [])
+        finish_reason = response_data.get('finish_reason')
+        
+        # Auto-determine finish reason if not provided
+        if finish_reason is None:
+            finish_reason = "tool_calls" if tool_calls else "stop"
+        
+        mock_response = create_mock_deepseek_response(content, tool_calls)
+        mock_response.choices[0].finish_reason = finish_reason
+        mock_responses.append(mock_response)
+    
+    return mock_responses
+
+
+def create_mock_sequential_tool_manager():
+    """Create a mock tool manager for sequential testing"""
+    mock_tool_manager = Mock()
+    
+    # Mock tools and sources tracking
+    mock_tool_manager.tools = {}
+    mock_tool_manager._sequential_sources = []
+    
+    # Mock method implementations
+    def mock_execute_tool(tool_name, **kwargs):
+        # Return different responses based on tool name for testing
+        if tool_name == "get_course_outline":
+            return "Course: ML Basics\nLesson 1: Introduction\nLesson 2: Algorithms"
+        elif tool_name == "search_course_content":
+            return "[ML Basics - Lesson 1]\nMachine learning is a subset of AI."
+        else:
+            return f"Mock result for {tool_name}"
+    
+    def mock_get_tool_definitions():
+        return [
+            {
+                "type": "function",
+                "function": {
+                    "name": "get_course_outline",
+                    "description": "Get course outline",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "course_name": {"type": "string"}
+                        },
+                        "required": ["course_name"]
+                    }
+                }
+            },
+            {
+                "type": "function", 
+                "function": {
+                    "name": "search_course_content",
+                    "description": "Search course content",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "query": {"type": "string"},
+                            "course_name": {"type": "string"}
+                        },
+                        "required": ["query"]
+                    }
+                }
+            }
+        ]
+    
+    def mock_get_last_sources():
+        return mock_tool_manager._sequential_sources.copy()
+    
+    def mock_reset_sources():
+        mock_tool_manager._sequential_sources = []
+    
+    def mock_set_sequential_sources(sources):
+        mock_tool_manager._sequential_sources = sources.copy()
+    
+    # Set up mock methods
+    mock_tool_manager.execute_tool = Mock(side_effect=mock_execute_tool)
+    mock_tool_manager.get_tool_definitions = Mock(side_effect=mock_get_tool_definitions)
+    mock_tool_manager.get_last_sources = Mock(side_effect=mock_get_last_sources)
+    mock_tool_manager.reset_sources = Mock(side_effect=mock_reset_sources)
+    mock_tool_manager.set_sequential_sources = Mock(side_effect=mock_set_sequential_sources)
+    
+    return mock_tool_manager
+
+
+def assert_sequential_execution_calls(mock_client, expected_call_count: int):
+    """Assert that the correct number of API calls were made during sequential execution"""
+    actual_calls = mock_client.chat.completions.create.call_count
+    assert actual_calls == expected_call_count, f"Expected {expected_call_count} API calls, got {actual_calls}"
+
+
+def get_api_call_messages(mock_client, call_index: int = 0):
+    """Get the messages from a specific API call for inspection"""
+    calls = mock_client.chat.completions.create.call_args_list
+    if call_index >= len(calls):
+        raise IndexError(f"Call index {call_index} out of range, only {len(calls)} calls made")
+    
+    call_kwargs = calls[call_index][1]  # Get keyword arguments
+    return call_kwargs.get('messages', [])
