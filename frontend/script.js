@@ -122,10 +122,30 @@ function addMessage(content, type, sources = null, isWelcome = false) {
     let html = `<div class="message-content">${displayContent}</div>`;
     
     if (sources && sources.length > 0) {
+        // Process sources to create clickable links
+        const formattedSources = sources.map((source, index) => {
+            // Debug: Log the source to console
+            console.log(`Source ${index}:`, JSON.stringify(source));
+            
+            // Convert source to string if it isn't already
+            const sourceStr = String(source);
+            
+            // Check if source contains a pipe-separated link
+            if (sourceStr.includes('|')) {
+                const parts = sourceStr.split('|');
+                const displayText = parts[0].trim();
+                const link = parts.slice(1).join('|').trim(); // Handle URLs that might contain pipes
+                console.log(`Parsed: "${displayText}" → "${link}"`);
+                return `<a href="${escapeHtml(link)}" target="_blank" class="source-link" rel="noopener">${escapeHtml(displayText)}</a>`;
+            } else {
+                return `<span class="source-text">${escapeHtml(sourceStr)}</span>`;
+            }
+        });
+        
         html += `
             <details class="sources-collapsible">
                 <summary class="sources-header">Sources</summary>
-                <div class="sources-content">${sources.join(', ')}</div>
+                <div class="sources-content">${formattedSources.join('')}</div>
             </details>
         `;
     }
