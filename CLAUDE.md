@@ -27,6 +27,9 @@ DEEPSEEK_API_KEY=your_deepseek_api_key_here
 - Web Interface: `http://localhost:8000`
 - API Documentation: `http://localhost:8000/docs`
 
+## Dependency Management Notes
+- Use `uv` to run Python files or add any dependencies
+
 ## High-Level Architecture
 
 ### Core Components Flow
