@@ -51,6 +51,10 @@ class CourseStats(BaseModel):
     total_courses: int
     course_titles: List[str]
 
+class NewSessionResponse(BaseModel):
+    """Response model for new session creation"""
+    session_id: str
+
 # API Endpoints
 
 @app.post("/api/query", response_model=QueryResponse)
@@ -82,6 +86,15 @@ async def get_course_stats():
             total_courses=analytics["total_courses"],
             course_titles=analytics["course_titles"]
         )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/new-session", response_model=NewSessionResponse)
+async def create_new_session():
+    """Create a new conversation session"""
+    try:
+        session_id = rag_system.session_manager.create_session()
+        return NewSessionResponse(session_id=session_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
